@@ -1,16 +1,24 @@
 "use client";
-import dynamic from "next/dynamic";
 import Placeholder from "./Placeholder";
+import JsonFormatter from "./JsonFormatter";
+import QrGenerator from "./QrGenerator";
+import PasswordGenerator from "./PasswordGenerator";
+import WhatsAppChecker from "./WhatsAppChecker";
+import TikTokDownloader from "./TikTokDownloader";
+import ImageTools from "./ImageTools";
 import { Base64Tool, UrlTool } from "./EncodingTools";
 import { UuidGenerator, HashGenerator, RandomNumber } from "./GeneratorTools";
 import { TextCounter, CaseConverter, RemoveDuplicates, TextFormatter } from "./TextTools";
-import { ColorPicker, TimestampConverter, UnitConverter, Calculator, IpInformation, UserAgentParser, JwtDecoder } from "./UtilityTools";
-const JsonFormatter = dynamic(() => import("./JsonFormatter"));
-const QrGenerator = dynamic(() => import("./QrGenerator"));
-const PasswordGenerator = dynamic(() => import("./PasswordGenerator"));
-const WhatsAppChecker = dynamic(() => import("./WhatsAppChecker"));
-const TikTokDownloader = dynamic(() => import("./TikTokDownloader"));
-const ImageTools = dynamic(() => import("./ImageTools"));
+import {
+  ColorPicker,
+  TimestampConverter,
+  UnitConverter,
+  Calculator,
+  IpInformation,
+  UserAgentParser,
+  JwtDecoder,
+} from "./UtilityTools";
+
 export const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "json-formatter": JsonFormatter,
   "qr-generator": QrGenerator,
@@ -38,6 +46,11 @@ export const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "user-agent": UserAgentParser,
   "jwt-decoder": JwtDecoder,
 };
-export function getToolComponent(slug: string) {
-  return TOOL_COMPONENTS[slug] || (() => <Placeholder slug={slug} />);
+
+export function getToolComponent(slug: string): React.ComponentType {
+  const Comp = TOOL_COMPONENTS[slug];
+  if (Comp) return Comp;
+  return function PlaceholderWrapper() {
+    return <Placeholder slug={slug} />;
+  };
 }

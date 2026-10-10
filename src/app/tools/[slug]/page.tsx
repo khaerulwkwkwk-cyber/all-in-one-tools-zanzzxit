@@ -4,17 +4,26 @@ import ToolLayout from "@/components/ToolLayout";
 import ToolRenderer from "@/components/tools/ToolRenderer";
 import { TOOLS } from "@/lib/tools";
 
-interface Params { slug: string; }
+interface Params {
+  slug: string;
+}
 
 export function generateStaticParams() {
   return TOOLS.map((t) => ({ slug: t.slug }));
 }
 
-export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<Params>;
+}): Promise<Metadata> {
   const { slug } = await params;
   const tool = TOOLS.find((t) => t.slug === slug);
   if (!tool) return { title: "Tool Not Found" };
-  return { title: tool.name + " — Fast Online Tool", description: tool.description };
+  return {
+    title: `${tool.name} — Fast Online Tool`,
+    description: tool.description,
+  };
 }
 
 export default async function ToolPage({ params }: { params: Promise<Params> }) {

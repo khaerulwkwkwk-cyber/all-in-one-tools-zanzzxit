@@ -20,21 +20,16 @@ export default function ParticleBackground() {
     interface Orb { x: number; y: number; r: number; vy: number; vx: number; hue: number; phase: number; }
     let orbs: Orb[] = [];
 
-    interface Drop { x: number; y: number; speed: number; chars: string[]; hue: number; }
-    let drops: Drop[] = [];
-    const CHARS = "01アイウエオカキクケコABCDEF<>{}[]/*+-".split("");
-    const FONT_SIZE = 14;
-
     interface Star { x: number; y: number; r: number; a: number; aSpeed: number; }
     let stars: Star[] = [];
 
+    const HUES = [190, 195, 200, 210]; // neon blue → cyan → sky
+
     const resize = () => {
-      // Ambil ukuran DARI CANVAS SENDIRI (bukan window)
       const rect = canvas.getBoundingClientRect();
       w = rect.width || window.innerWidth;
       h = rect.height || window.innerHeight;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -43,33 +38,24 @@ export default function ParticleBackground() {
       nodes = Array.from({ length: nodeCount }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        r: Math.random() * 1.4 + 0.6,
-        hue: Math.random() > 0.5 ? 265 : 190,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        r: Math.random() * 1.4 + 0.7,
+        hue: HUES[Math.floor(Math.random() * HUES.length)],
       }));
 
-      const orbCount = w < 768 ? 8 : 16;
+      const orbCount = w < 768 ? 6 : 12;
       orbs = Array.from({ length: orbCount }, () => ({
         x: Math.random() * w,
         y: h + Math.random() * h,
-        r: 40 + Math.random() * 90,
-        vy: -(0.2 + Math.random() * 0.4),
-        vx: (Math.random() - 0.5) * 0.15,
-        hue: Math.random() > 0.5 ? 265 : 190,
+        r: 60 + Math.random() * 120,
+        vy: -(0.15 + Math.random() * 0.3),
+        vx: (Math.random() - 0.5) * 0.12,
+        hue: HUES[Math.floor(Math.random() * HUES.length)],
         phase: Math.random() * Math.PI * 2,
       }));
 
-      const cols = Math.floor(w / FONT_SIZE);
-      drops = Array.from({ length: cols }, (_, i) => ({
-        x: i,
-        y: Math.random() * -h,
-        speed: 1 + Math.random() * 2.5,
-        chars: Array.from({ length: 10 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]),
-        hue: Math.random() > 0.5 ? 140 : 160,
-      }));
-
-      const starCount = Math.min(120, Math.floor((w * h) / 13000));
+      const starCount = Math.min(140, Math.floor((w * h) / 12000));
       stars = Array.from({ length: starCount }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
@@ -77,8 +63,6 @@ export default function ParticleBackground() {
         a: Math.random(),
         aSpeed: (Math.random() - 0.5) * 0.02,
       }));
-
-      console.log("✨ Particle:", nodeCount, "nodes,", orbCount, "orbs,", starCount, "stars", "| viewport:", w, "x", h);
     };
 
     const onMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
@@ -91,70 +75,61 @@ export default function ParticleBackground() {
       lastTime = t;
       ctx.clearRect(0, 0, w, h);
 
-      // Stars
+      // Stars (twinkling)
       for (const s of stars) {
         s.a += s.aSpeed * dt;
-        s.a = Math.max(0.15, Math.min(0.9, s.a));
-        ctx.fillStyle = `rgba(200,210,255,${s.a * 0.7})`;
+        s.a = Math.max(0.15, Math.min(0.85, s.a));
+        ctx.fillStyle = `rgba(196, 181, 253, ${s.a * 0.6})`;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Matrix rain
-      ctx.font = `${FONT_SIZE}px monospace`;
-      ctx.textAlign = "center";
-      for (const d of drops) {
-        d.y += d.speed * dt;
-        if (d.y > h + 200) { d.y = -200 - Math.random() * h * 0.5; d.speed = 1 + Math.random() * 2.5; }
-        for (let i = 0; i < d.chars.length; i++) {
-          const cy = d.y - i * FONT_SIZE;
-          if (cy < -FONT_SIZE || cy > h + FONT_SIZE) continue;
-          const alpha = (1 - i / d.chars.length) * 0.4;
-          ctx.fillStyle = i === 0
-            ? `hsla(${d.hue}, 100%, 80%, 0.85)`
-            : `hsla(${d.hue}, 90%, 55%, ${alpha})`;
-          ctx.fillText(d.chars[i], d.x * FONT_SIZE + FONT_SIZE / 2, cy);
-        }
-      }
-
-      // Orbs
+      // Floating orbs (soft purple glows)
       for (const o of orbs) {
         o.y += o.vy * dt;
         o.x += o.vx * dt;
-        o.phase += 0.01 * dt;
-        if (o.y + o.r < -50) { o.y = h + o.r + Math.random() * 100; o.x = Math.random() * w; o.r = 40 + Math.random() * 90; }
-        const wob = Math.sin(o.phase) * 8;
+        o.phase += 0.008 * dt;
+        if (o.y + o.r < -50) {
+          o.y = h + o.r + Math.random() * 100;
+          o.x = Math.random() * w;
+          o.r = 60 + Math.random() * 120;
+        }
+        const wob = Math.sin(o.phase) * 12;
         const g = ctx.createRadialGradient(o.x + wob, o.y, 0, o.x + wob, o.y, o.r);
-        g.addColorStop(0, `hsla(${o.hue}, 100%, 65%, 0.18)`);
-        g.addColorStop(1, `hsla(${o.hue}, 100%, 60%, 0)`);
+        g.addColorStop(0, `hsla(${o.hue}, 85%, 65%, 0.14)`);
+        g.addColorStop(0.6, `hsla(${o.hue}, 85%, 60%, 0.05)`);
+        g.addColorStop(1, `hsla(${o.hue}, 85%, 60%, 0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(o.x + wob, o.y, o.r, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Nodes
+      // Nodes (constellation)
       for (const p of nodes) {
-        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
         if (p.x < 0 || p.x > w) p.vx *= -1;
         if (p.y < 0 || p.y > h) p.vy *= -1;
 
-        const dx = p.x - mouse.x, dy = p.y - mouse.y;
+        // Mouse repulsion
+        const dx = p.x - mouse.x;
+        const dy = p.y - mouse.y;
         const d2 = dx * dx + dy * dy;
         if (d2 < 130 * 130) {
           const d = Math.sqrt(d2) || 1;
           const f = (130 - d) / 130;
-          p.x += (dx / d) * f * 1.8;
-          p.y += (dy / d) * f * 1.8;
+          p.x += (dx / d) * f * 1.6;
+          p.y += (dy / d) * f * 1.6;
         }
 
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 7);
-        grad.addColorStop(0, `hsla(${p.hue}, 100%, 75%, 0.95)`);
-        grad.addColorStop(1, `hsla(${p.hue}, 100%, 75%, 0)`);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 8);
+        grad.addColorStop(0, `hsla(${p.hue}, 90%, 78%, 0.95)`);
+        grad.addColorStop(1, `hsla(${p.hue}, 90%, 78%, 0)`);
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * 7, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.r * 8, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -166,7 +141,8 @@ export default function ParticleBackground() {
           const dx = a.x - b.x, dy = a.y - b.y;
           const d2 = dx * dx + dy * dy;
           if (d2 < maxDist * maxDist) {
-            ctx.strokeStyle = `hsla(230, 100%, 75%, ${(1 - Math.sqrt(d2) / maxDist) * 0.35})`;
+            const alpha = (1 - Math.sqrt(d2) / maxDist) * 0.3;
+            ctx.strokeStyle = `hsla(195, 90%, 75%, ${alpha})`;
             ctx.lineWidth = 0.7;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -179,17 +155,15 @@ export default function ParticleBackground() {
       raf = requestAnimationFrame(draw);
     };
 
-    // Init setelah browser selesai layout
     const start = () => {
       resize();
       raf = requestAnimationFrame(draw);
     };
 
-    if (document.readyState === "complete") {
-      requestAnimationFrame(start);
-    } else {
+    if (document.readyState === "complete") requestAnimationFrame(start);
+    else {
       window.addEventListener("load", start, { once: true });
-      requestAnimationFrame(start); // fallback
+      requestAnimationFrame(start);
     }
 
     window.addEventListener("resize", onResize);
@@ -206,11 +180,5 @@ export default function ParticleBackground() {
     };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      data-particle
-      aria-hidden
-    />
-  );
+  return <canvas ref={canvasRef} data-particle aria-hidden />;
 }

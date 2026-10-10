@@ -1,2 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+
+Sitemap: https://all-in-one-tools-zanzzxit.vercel.app/sitemap.xml

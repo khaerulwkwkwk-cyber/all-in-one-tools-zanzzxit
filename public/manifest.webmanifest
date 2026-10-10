@@ -1,0 +1,18 @@
+{
+  "name": "TOOLS ALL IN ONE (BETA)",
+  "short_name": "TOOLS ALL IN ONE",
+  "description": "One platform. Hundreds of useful tools. By ©zann.id",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060b18",
+  "theme_color": "#22d3ee",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
