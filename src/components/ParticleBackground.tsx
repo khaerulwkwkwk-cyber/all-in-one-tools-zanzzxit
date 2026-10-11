@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useRef } from "react";
 
+interface Node {
+  x: number; y: number;
+  vx: number; vy: number;
+  r: number;
+  pulse: number;
+  pulseSpeed: number;
+}
+
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -13,17 +21,12 @@ export default function ParticleBackground() {
     let w = 0, h = 0, dpr = 1;
     let raf = 0;
     const mouse = { x: -9999, y: -9999 };
-
-    interface Node { x: number; y: number; vx: number; vy: number; r: number; hue: number; }
     let nodes: Node[] = [];
 
-    interface Orb { x: number; y: number; r: number; vy: number; vx: number; hue: number; phase: number; }
-    let orbs: Orb[] = [];
-
-    interface Star { x: number; y: number; r: number; a: number; aSpeed: number; }
-    let stars: Star[] = [];
-
-    const HUES = [190, 195, 200, 210]; // neon blue → cyan → sky
+    // Palette merah
+    const RED = "244, 63, 94";        // rose-500
+    const RED_LIGHT = "251, 113, 133"; // rose-400
+    const RED_DEEP = "190, 18, 60";    // rose-700
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -34,34 +37,16 @@ export default function ParticleBackground() {
       canvas.height = Math.floor(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const nodeCount = Math.min(70, Math.floor((w * h) / 26000));
-      nodes = Array.from({ length: nodeCount }, () => ({
+      // Node density tinggi seperti referensi
+      const count = Math.min(110, Math.floor((w * h) / 14000));
+      nodes = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        r: Math.random() * 1.4 + 0.7,
-        hue: HUES[Math.floor(Math.random() * HUES.length)],
-      }));
-
-      const orbCount = w < 768 ? 6 : 12;
-      orbs = Array.from({ length: orbCount }, () => ({
-        x: Math.random() * w,
-        y: h + Math.random() * h,
-        r: 60 + Math.random() * 120,
-        vy: -(0.15 + Math.random() * 0.3),
-        vx: (Math.random() - 0.5) * 0.12,
-        hue: HUES[Math.floor(Math.random() * HUES.length)],
-        phase: Math.random() * Math.PI * 2,
-      }));
-
-      const starCount = Math.min(140, Math.floor((w * h) / 12000));
-      stars = Array.from({ length: starCount }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        r: Math.random() * 0.9 + 0.2,
-        a: Math.random(),
-        aSpeed: (Math.random() - 0.5) * 0.02,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+        r: Math.random() * 1.8 + 0.8,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.02 + Math.random() * 0.03,
       }));
     };
 
@@ -75,41 +60,45 @@ export default function ParticleBackground() {
       lastTime = t;
       ctx.clearRect(0, 0, w, h);
 
-      // Stars (twinkling)
-      for (const s of stars) {
-        s.a += s.aSpeed * dt;
-        s.a = Math.max(0.15, Math.min(0.85, s.a));
-        ctx.fillStyle = `rgba(196, 181, 253, ${s.a * 0.6})`;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // ==== 1. GARIS PENGHUBUNG (digambar dulu, biar di belakang) ====
+      const maxDist = 160;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < maxDist * maxDist) {
+            const dist = Math.sqrt(d2);
+            const alpha = (1 - dist / maxDist);
+            // Garis lebih tebal & menyala
+            const lineW = 0.4 + alpha * 1.1;
+            ctx.strokeStyle = `rgba(${RED}, ${alpha * 0.55})`;
+            ctx.lineWidth = lineW;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
 
-      // Floating orbs (soft purple glows)
-      for (const o of orbs) {
-        o.y += o.vy * dt;
-        o.x += o.vx * dt;
-        o.phase += 0.008 * dt;
-        if (o.y + o.r < -50) {
-          o.y = h + o.r + Math.random() * 100;
-          o.x = Math.random() * w;
-          o.r = 60 + Math.random() * 120;
+            // Highlight yang lebih dekat
+            if (dist < maxDist * 0.5) {
+              ctx.strokeStyle = `rgba(${RED_LIGHT}, ${alpha * 0.35})`;
+              ctx.lineWidth = 0.4;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.stroke();
+            }
+          }
         }
-        const wob = Math.sin(o.phase) * 12;
-        const g = ctx.createRadialGradient(o.x + wob, o.y, 0, o.x + wob, o.y, o.r);
-        g.addColorStop(0, `hsla(${o.hue}, 85%, 65%, 0.14)`);
-        g.addColorStop(0.6, `hsla(${o.hue}, 85%, 60%, 0.05)`);
-        g.addColorStop(1, `hsla(${o.hue}, 85%, 60%, 0)`);
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(o.x + wob, o.y, o.r, 0, Math.PI * 2);
-        ctx.fill();
       }
 
-      // Nodes (constellation)
+      // ==== 2. NODE DENGAN GLOW & PULSE ====
       for (const p of nodes) {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        p.pulse += p.pulseSpeed * dt;
+
         if (p.x < 0 || p.x > w) p.vx *= -1;
         if (p.y < 0 || p.y > h) p.vy *= -1;
 
@@ -117,39 +106,37 @@ export default function ParticleBackground() {
         const dx = p.x - mouse.x;
         const dy = p.y - mouse.y;
         const d2 = dx * dx + dy * dy;
-        if (d2 < 130 * 130) {
+        if (d2 < 150 * 150) {
           const d = Math.sqrt(d2) || 1;
-          const f = (130 - d) / 130;
-          p.x += (dx / d) * f * 1.6;
-          p.y += (dy / d) * f * 1.6;
+          const f = (150 - d) / 150;
+          p.x += (dx / d) * f * 2;
+          p.y += (dy / d) * f * 2;
         }
 
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 8);
-        grad.addColorStop(0, `hsla(${p.hue}, 90%, 78%, 0.95)`);
-        grad.addColorStop(1, `hsla(${p.hue}, 90%, 78%, 0)`);
+        const pulseScale = 1 + Math.sin(p.pulse) * 0.5;
+        const outerR = p.r * 8 * pulseScale;
+
+        // Outer glow (soft)
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, outerR);
+        grad.addColorStop(0, `rgba(${RED_LIGHT}, 0.55)`);
+        grad.addColorStop(0.4, `rgba(${RED}, 0.25)`);
+        grad.addColorStop(1, `rgba(${RED_DEEP}, 0)`);
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * 8, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, outerR, 0, Math.PI * 2);
         ctx.fill();
-      }
 
-      // Connections
-      const maxDist = 140;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const a = nodes[i], b = nodes[j];
-          const dx = a.x - b.x, dy = a.y - b.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 < maxDist * maxDist) {
-            const alpha = (1 - Math.sqrt(d2) / maxDist) * 0.3;
-            ctx.strokeStyle = `hsla(195, 90%, 75%, ${alpha})`;
-            ctx.lineWidth = 0.7;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-          }
-        }
+        // Core dot (terang)
+        ctx.fillStyle = `rgba(${RED_LIGHT}, 1)`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner hot spot
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 0.5 * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       raf = requestAnimationFrame(draw);
